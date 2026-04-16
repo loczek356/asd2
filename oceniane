@@ -1,0 +1,137 @@
+using ASD.Graphs;
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Text;
+
+namespace ASD2
+{
+    public class TreasureTrackers : MarshalByRefObject
+    {
+        /// <summary>
+        /// Etap I: Wybór dnia ekspedycji.
+        /// Wyznaczenie pierwszego dnia, w którym cała ekspedycja będzie w stanie
+        /// przejść przez podziemia.
+        /// </summary>
+        /// <param name="map">Graf skierowany reprezentujący połączenia pomiędzy komnatami w podziemiach.</param>
+        /// <param name="startChamber">Wierzchołek będący wejściem do podziemi.</param>
+        /// <param name="endChamber">Wierzchołek będący wyjściem z podziemi.</param>
+        /// <param name="durability">Tablica utrzymująca wytrzymałość każdej komnaty.</param>
+        /// <param name="opensOn">Tablica informująca, którego dnia otwiera się dana komnata.</param>
+        /// <param name="expeditionSize">Rozmiar ekspedycji, chcącej przejść przez podziemia.</param>
+        public int? Stage1(DiGraph map, int startChamber, int endChamber, int[] durability, int[] opensOn,
+            int expeditionSize)
+        {
+            // return null;
+            int n = map.VertexCount;
+            int lastDay = -1;
+            for (int i = 0; i < n; i++)
+            {
+                if (opensOn[i] >= lastDay)
+                {
+                    lastDay = opensOn[i];
+                }
+            }
+
+            (int, int)[] days = new (int, int)[n];
+            int[] dayy = new int[n];
+            for (int i = 0; i < n; i++)
+            {
+                dayy[i] = opensOn[i];
+            }
+
+            dayy.Sort();
+
+            for (int i = 0; i < n; i++)
+            {
+                days[i] = (i, opensOn[i]);
+            }
+
+            days.Sort((a, b) => a.Item2.CompareTo(b.Item2));
+
+            // dayy.BinarySearch((a, b) => CanGo(map, startChamber, endChamber, durability, opensOn, expeditionSize, dayy[start]));
+
+            // days.BinarySearch((a, b) => a.Item2.CompareTo(b.Item2));
+
+            if (CanGo(map, startChamber, endChamber, durability, opensOn, expeditionSize, days[n - 1].Item2) == false)
+            {
+                return null;
+            }
+            
+            int left = 0;
+            int right = n - 1;
+            int start = (right - left) / 2;
+            
+            while (left < right)
+            {
+                start = left +((right - left) / 2);
+                if (true == CanGo(map, startChamber, endChamber, durability, opensOn, expeditionSize,
+                        days[start].Item2))
+                {
+                    right = start;
+                }
+                else
+                {
+                    left = start+1;
+                }
+            }
+            
+            if (false == CanGo(map, startChamber, endChamber, durability, opensOn, expeditionSize,
+                    days[start].Item2))
+                start++;
+            return days[start].Item2;
+
+
+            // for (int i = 0; i <= lastDay; i++)
+            // {
+            //     if (true == CanGo(map, startChamber, endChamber, durability,opensOn,expeditionSize,i))
+            //     {
+            //         return i;
+            //     }
+            // }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Etap II: 
+        /// Wyznaczenie minimalnej liczby poszukiwaczy skarbów,
+        /// która będzie w stanie zebrać wszystkie skarby.
+        /// </summary>
+        /// <param name="map">Acykliczny graf skierowany reprezentujący połączenia pomiędzy komnatami w podziemiach.</param>
+        /// <param name="startChamber">Wierzchołek będący wejściem do podziemi.</param>
+        /// <param name="endChamber">Wierzchołek będący wyjściem z podziemi.</param>
+        /// <param name="durability">Tablica utrzymująca wytrzymałość każdej komnaty.</param>
+        public int? Stage2(DiGraph map, int startChamber, int endChamber, int[] durability)
+        {
+            return null;
+        }
+
+        private bool CanGo(DiGraph map, int startChamber, int endChamberint, int[] durability, int[] opensOn,
+            int expeditionSize, int day)
+        {
+            int n = map.VertexCount;
+            DiGraph<int> G = new DiGraph<int>(map.VertexCount * 2, map.Representation);
+            for (int i = 0; i < n; i++)
+            {
+                foreach (var edgeTo in map.OutNeighbors(i))
+                {
+                    G.AddEdge(i + n, edgeTo, int.MaxValue);
+                }
+
+                if (opensOn[i] <= day)
+                {
+                    G.AddEdge(i, i + n, durability[i]);
+                }
+            }
+
+            var res = Flows.FordFulkerson(G, startChamber, endChamberint + n);
+            if (res.Item1 >= expeditionSize)
+            {
+                return true;
+            }
+
+            return false;
+        }
+    }
+}
